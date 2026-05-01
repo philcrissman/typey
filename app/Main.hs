@@ -30,6 +30,9 @@ k = Lam "x" (TArrow TInt TInt) (Lam "y" (TArrow TInt TInt) (Var "x"))
 main :: IO ()
 main = do
   -- repl
+  print $ typeCheck [] identityExpr
+  print $ typeCheck [] (App identityExpr (LitBool True))
+  print $ typeCheck [] (App identityExpr (LitInt 42))
   print $ eval identityExpr
   print $ eval appliedId
   print $ eval (App (App k (Lam "q" TInt (Var "q"))) (Lam "y" TInt (Var "y")))
@@ -39,12 +42,23 @@ typeCheck :: Context -> Expr -> Either String Type
 typeCheck ctx (Var x)     = case lookup x ctx of
   Nothing -> Left ("unbound variable: " ++ x)
   Just t  -> Right t
-typeCheck ctx (LitInt _)  = Right TInt
-typeCheck ctx (LitBool _) = Right TBool
+typeCheck _ (LitInt _)  = Right TInt
+typeCheck _ (LitBool _) = Right TBool
 typeCheck ctx (Lam x t body) =
   case typeCheck ((x, t) : ctx) body of
     Left err -> Left err
     Right t2 -> Right (TArrow t t2)
+typeCheck ctx (App f a) =
+  case typeCheck ctx f of
+    Left err -> Left err
+    Right t  -> case t of
+      (TArrow t1 t2) -> case typeCheck ctx a of
+        Left err -> Left err
+        Right t3 -> if t1 /= t3
+                      then Left ("type mismatch")
+                      else Right t2
+      _ -> Left ("Not a function")
+  
 
 eval :: Expr -> Expr
 eval (Var x)        = Var x
