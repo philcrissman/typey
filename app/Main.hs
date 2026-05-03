@@ -60,26 +60,31 @@ main = do
 
 tokenize :: String -> Either String [Token]
 tokenize [] = Right []
-tokenize ('\\' : rest) = fmap (TkLam :) (tokenize rest)
-tokenize ('(' : rest) = fmap (TkLParen :) (tokenize rest)
-tokenize (')' : rest) = fmap (TkRParen :) (tokenize rest)
-tokenize ('.' : rest) = fmap (TkDot :) (tokenize rest)
+tokenize ('\\' : rest)      = fmap (TkLam :) (tokenize rest)
+tokenize ('(' : rest)       = fmap (TkLParen :) (tokenize rest)
+tokenize (')' : rest)       = fmap (TkRParen :) (tokenize rest)
+tokenize ('.' : rest)       = fmap (TkDot :) (tokenize rest)
 tokenize ('-' : '>' : rest) = fmap (TkArrow :) (tokenize rest)
-tokenize (':' : rest) = fmap (TkColon :) (tokenize rest)
+tokenize (':' : rest)       = fmap (TkColon :) (tokenize rest)
 tokenize (c : rest)
   | isSpace c = tokenize rest
   | isAlpha c = let (word, remaining) = span isAlpha rest
                     fullword = c : word
                 in case fullword of
-                  "Int" -> fmap (TkTInt :) (tokenize remaining)
-                  "Bool" -> fmap (TkTBool :) (tokenize remaining)
-                  "true" -> fmap (TkLitBool True :) (tokenize remaining)
+                  "Int"   -> fmap (TkTInt :) (tokenize remaining)
+                  "Bool"  -> fmap (TkTBool :) (tokenize remaining)
+                  "true"  -> fmap (TkLitBool True :) (tokenize remaining)
                   "false" -> fmap (TkLitBool False :) (tokenize remaining)
                   _       -> fmap (TkIdent fullword :) (tokenize remaining)
   | isDigit c = let (digits, remaining) = span isDigit rest
                     fullnum = c : digits
                 in fmap (TkLitInt (read fullnum) :) (tokenize remaining)
   | otherwise = Left ("unexpected character: " ++ [c])
+
+parseAtom :: [Token] -> Either String (Expr, [Token])
+parseAtom (TkLitInt n : rest)  = Right (LitInt n, rest)
+parseAtom (TkLitBool n : rest) = Right (LitBool n, rest)
+parseAtom (TkIdent n : rest)   = Right (Var n, rest)
 
 typeCheck :: Context -> Expr -> Either String Type
 typeCheck ctx (Var x)     = case lookup x ctx of
