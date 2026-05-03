@@ -1,6 +1,21 @@
 module Main where
 
 import System.IO
+import Data.Char
+
+data Token
+  = TkLam
+  | TkIdent String
+  | TkColon
+  | TkDot
+  | TkArrow
+  | TkLParen
+  | TkRParen
+  | TkTInt         -- the Int keyword
+  | TkTBool        -- the Bool keyword
+  | TkLitInt Int   -- an integer literal, like 3, or 9, or 111
+  | TkLitBool Bool -- literal true or false
+  deriving(Show, Eq)
 
 data Type
   = TInt
@@ -30,6 +45,11 @@ k = Lam "x" (TArrow TInt TInt) (Lam "y" (TArrow TInt TInt) (Var "x"))
 main :: IO ()
 main = do
   -- repl
+  print $ tokenize "\\x.x"
+  print $ tokenize "\\x:Int.x"        -- lambda with type annotation
+  print $ tokenize "\\x:Int.42"       -- lambda returning a literal
+  print $ tokenize "(\\x:Int.x) 42"   -- application
+  print $ tokenize "\\x:Int->Int.x"   -- binder with function type
   print $ typeCheck [] identityExpr
   print $ typeCheck [] (App identityExpr (LitBool True))
   print $ typeCheck [] (App identityExpr (LitInt 42))
@@ -37,6 +57,29 @@ main = do
   print $ eval appliedId
   print $ eval (App (App k (Lam "q" TInt (Var "q"))) (Lam "y" TInt (Var "y")))
 
+
+tokenize :: String -> Either String [Token]
+tokenize [] = Right []
+tokenize ('\\' : rest) = fmap (TkLam :) (tokenize rest)
+tokenize ('(' : rest) = fmap (TkLParen :) (tokenize rest)
+tokenize (')' : rest) = fmap (TkRParen :) (tokenize rest)
+tokenize ('.' : rest) = fmap (TkDot :) (tokenize rest)
+tokenize ('-' : '>' : rest) = fmap (TkArrow :) (tokenize rest)
+tokenize (':' : rest) = fmap (TkColon :) (tokenize rest)
+tokenize (c : rest)
+  | isSpace c = tokenize rest
+  | isAlpha c = let (word, remaining) = span isAlpha rest
+                    fullword = c : word
+                in case fullword of
+                  "Int" -> fmap (TkTInt :) (tokenize remaining)
+                  "Bool" -> fmap (TkTBool :) (tokenize remaining)
+                  "true" -> fmap (TkLitBool True :) (tokenize remaining)
+                  "false" -> fmap (TkLitBool False :) (tokenize remaining)
+                  _       -> fmap (TkIdent fullword :) (tokenize remaining)
+  | isDigit c = let (digits, remaining) = span isDigit rest
+                    fullnum = c : digits
+                in fmap (TkLitInt (read fullnum) :) (tokenize remaining)
+  | otherwise = Left ("unexpected character: " ++ [c])
 
 typeCheck :: Context -> Expr -> Either String Type
 typeCheck ctx (Var x)     = case lookup x ctx of
