@@ -11,10 +11,10 @@ data Token
   | TkArrow
   | TkLParen
   | TkRParen
-  | TkTInt         -- the Int keyword
-  | TkTBool        -- the Bool keyword
-  | TkLitInt Int   -- an integer literal, like 3, or 9, or 111
-  | TkLitBool Bool -- literal true or false
+  | TkTInt
+  | TkTBool
+  | TkLitInt Int
+  | TkLitBool Bool
   deriving(Show, Eq)
 
 data Type
@@ -45,11 +45,13 @@ k = Lam "x" (TArrow TInt TInt) (Lam "y" (TArrow TInt TInt) (Var "x"))
 main :: IO ()
 main = do
   -- repl
+ 
+  -- some expressions for testing purposes
   print $ tokenize "\\x.x"
-  print $ tokenize "\\x:Int.x"        -- lambda with type annotation
-  print $ tokenize "\\x:Int.42"       -- lambda returning a literal
-  print $ tokenize "(\\x:Int.x) 42"   -- application
-  print $ tokenize "\\x:Int->Int.x"   -- binder with function type
+  print $ tokenize "\\x:Int.x" -- lambda with type annotation
+  print $ tokenize "\\x:Int.42" -- lambda returning a literal
+  print $ tokenize "(\\x:Int.x) 42" -- application
+  print $ tokenize "\\x:Int->Int.x" -- binder with function type
   print $ typeCheck [] identityExpr
   print $ typeCheck [] (App identityExpr (LitBool True))
   print $ typeCheck [] (App identityExpr (LitInt 42))
